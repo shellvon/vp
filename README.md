@@ -11,8 +11,8 @@
 # 说明
 
  - [x] 数据采集部分
- - [ ] WebUI
- - [ ] RESTful API
+ - [x] WebUI   <--- By Vuetify & Vue CLI3
+ - [x] ~~RESTful~~ API <---- By flask
 
 # Step 1. 搜集站点
 
