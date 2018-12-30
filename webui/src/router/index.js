@@ -18,10 +18,10 @@ const router = new Router({
             }
         },
         {
-            path: '/movie',
-            name: 'movie',
+            path: '/player',
+            name: 'player',
             component(resolve) {
-                require(['@/views/movie/index.vue'], resolve)
+                require(['@/views/movie/player.vue'], resolve)
             }
         }
     ]

@@ -1,0 +1,161 @@
+<template>
+  <v-layout row>
+    <v-flex xs12>
+      <v-card>
+        <v-progress-linear :indeterminate="true" v-if="loading" color="info"></v-progress-linear>
+
+        <v-card-actions>
+          <v-select :items="playlist" v-model="url" item-text="name" item-value="url" label="播放地址"></v-select>
+          <v-spacer></v-spacer>
+          <span class="grey--text small">微信搜索: 淘逗逗</span>
+        </v-card-actions>
+
+        <div class="player-container" v-if="playerType === 'm3u8'">
+          <video-player ref="videoPlayer" class="vjs-custom-skin" :options="playerOptions"></video-player>
+        </div>
+        <div class="h_iframe" v-if="playerType === 'flash'">
+          <iframe :src="url" frameborder="0" allowfullscreen></iframe>
+        </div>
+
+        <v-card-title primary-title>
+          <div>
+            <div class="headline">{{movie.name}}</div>
+            <span class="grey--text small" :style="{textAlign: 'right'}">{{movie.synopsis}}</span>
+          </div>
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-slide-y-transition>
+          <v-list v-if="show">
+            <v-list-tile v-for="(val, key) in meta" :key="key">
+              <v-list-tile-content>{{val}}:</v-list-tile-content>
+              <v-list-tile-content class="align-end">{{ movie[key] }}</v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-slide-y-transition>
+        <v-card-actions>
+          <v-btn :to="{name: 'home'}" color="success">返回搜索</v-btn>
+
+          <v-dialog
+            v-model="dialog"
+            width="500"
+            class="pl-1"
+            v-if="movie.download_link && movie.download_link.length > 0"
+          >
+            <v-btn slot="activator" color="red lighten-2" dark>下载</v-btn>
+
+            <v-card>
+              <v-card-title class="headline grey lighten-2" primary-title>请选择你需要下载的片源</v-card-title>
+
+              <v-card-text>
+                <template v-if="movie.download_link && movie.download_link.length > 0">
+                  <v-radio-group v-model="selected">
+                    <v-radio
+                      v-for="(item, key) in movie.download_link"
+                      :key="key"
+                      :value="item.url"
+                    >
+                      <div slot="label">
+                        <a
+                          :href="item.url"
+                          class="download_link"
+                          target="_blank"
+                        >{{movie.name}}-{{item.name}}</a>
+                      </div>
+                    </v-radio>
+                  </v-radio-group>
+                </template>
+                <template v-else>暂无片源可供下载....</template>
+              </v-card-text>
+
+              <v-divider></v-divider>
+
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="primary" @click="dialog = false">取消</v-btn>
+                <v-btn color="error" @click="download">下载</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="show = !show">
+            <v-icon>{{ show ? 'keyboard_arrow_down' : 'keyboard_arrow_up' }}</v-icon>
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-flex>
+  </v-layout>
+</template>
+
+<script>
+import { videoPlayer } from "vue-video-player";
+
+import { detail } from "@/api/home.js";
+
+import "video.js/dist/video-js.css";
+import "vue-video-player/src/custom-theme.css";
+//引入hls.js
+import "videojs-contrib-hls.js/src/videojs.hlsjs";
+
+export default {
+  name: "player",
+  components: { videoPlayer },
+  data() {
+    return {
+      loading: true,
+      url: null,
+      movie: {},
+      show: false,
+      dialog: false,
+      selected: "",
+      meta: {
+        directors: "导演",
+        actors: "主演",
+        note: "备注",
+        year: "年份",
+        score: "评分"
+      },
+      playerOptions: {
+        playbackRates: [0.7, 1.0, 1.5, 2.0, 5],
+        autoplay: false,
+        controls: true,
+        preload: "auto",
+        muted: false,
+        loop: false,
+        language: "zh-CN",
+        aspectRatio: "16:9",
+        fluid: true,
+        sources: [],
+        width: document.documentElement.clientWidth,
+        notSupportedMessage: "此视频暂无法播放，请稍后再试"
+      }
+    };
+  },
+  computed: {
+    player() {
+      return this.$refs.videoPlayer.player;
+    },
+    playlist() {
+      return this.movie.play_m3u8 || this.movie.play_flash || [];
+    },
+    playerType() {
+      return this.movie.play_m3u8 ? "m3u8" : "flash";
+    }
+  },
+  beforeMount() {
+    detail(this.$route.query.source, this.$route.query.id)
+      .then(movie => {
+        this.movie = movie;
+        this.url = this.playlist[this.playlist.length - 1].url;
+      })
+      .finally(() => (this.loading = false));
+  },
+  watch: {
+    url() {
+      this.playerOptions.sources = [{ src: this.url }];
+    }
+  }
+};
+</script>
+
+<style lang="scss">
+</style>

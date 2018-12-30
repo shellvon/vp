@@ -17,18 +17,6 @@ export default new Vuex.Store({
                     state.transitionName = transition;
                 }
             }
-        },
-        movie: {
-            namespaced: true,
-            state: {
-                currentMovie: {}
-            },
-            mutations: {
-                setCurrentMovie(state, movie)
-                {
-                    state.currentMovie = movie
-                }
-            }
         }
     }
 })

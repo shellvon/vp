@@ -19,3 +19,9 @@ export function search(keyword) {
         }
     })
 }
+
+export function detail(source, movieId){
+    return request({
+        url: `/api/movie/${source}/${movieId}`
+    })
+}

@@ -60,9 +60,7 @@ export default {
     },
     methods: {
         watchMovie(){
-            this.$store.commit('movie/setCurrentMovie', this.movie)
-
-            this.$router.push({name: 'movie'})
+            this.$router.push({name: 'player', query: {source: this.movie.source, id: this.movie.id}})
         }
     }
 }
