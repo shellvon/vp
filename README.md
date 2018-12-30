@@ -55,7 +55,7 @@ class FilmItem(scrapy.Item):
 # Step3. 存储
 
 本业务需求不涉及 URL 的去重，应该可以将参数 dont_filter 设置为 True 同时也无需引入 scrapy-redis 这种用于分布式爬虫的插件，不同站点的电影需要考虑去重，
-本文使用 Mongo 进行数据存储，根本原因在于 mongo 存储和查询的时候都超级简单，例子可以看后门的效果一栏。
+本文使用 Mongo 进行数据存储，根本原因在于 mongo 存储和查询的时候都超级简单，例子可以看后面的效果一栏。
 
 将电影名设置为唯一属性，存在则更新，不存在则插入。目前已经实现的功能 [Scrapy-Mongo](https://github.com/sebdah/scrapy-mongodb)
 配置如下：
