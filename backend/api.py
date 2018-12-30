@@ -1,24 +1,46 @@
 # -*- coding:utf-8 -*-
 
+import re
 from flask import Blueprint
 from flask import jsonify
 from flask import request
-import re
+from flask import current_app as app
 from lxml import etree
 import requests
 
 
 
-BASE_URI = 'http://www.zuidazy.net/'
+class BaseSpider(object):
 
+    BASE_URI = 'http://www.zuidazy.net/'
 
-class ZuidaZYAPI(object):
+    # 返回字符串的选择器
+    xpath_str_selectors = {
+        'cover': '//div[@class="vodImg"]/img/@src',  # 封面
+        'name': '//div[@class="vodInfo"]/div/h2/text()',  # 电影名
+        'note': '//div[@class="vodInfo"]/div/span/text()',  # 备注(BD高清等)
+        'score': '//div[@class="vodInfo"]/div/label/text()',  # 分数
+        'synopsis': '(//div[@class="vodplayinfo"])[2]/text()'  # 剧情简介
+    }
+
+    # 返回数组的选择器
+    xpath_lst_selectors = {
+        # 别名/导演/演员等信息在这个ul里面,所以顺序很重要
+        'extra': '//div[@class="vodinfobox"]/ul/li/span',
+        # 下载地址
+        'download_link': '//div[@class="vodplayinfo"]/div/div[@id="down_1"]/ul/li/text()',
+        # m3u8播放地址
+        'play_m3u8': '//div[@class="vodplayinfo"]/div/div[@id="play_1"]/ul/li/text()',
+        # flash播放地址
+        'play_flash': '//div[@class="vodplayinfo"]/div/div[@id="play_2"]/ul/li/text()',
+    }
+
     def __init__(self, limit=10):
+        self.limit = limit
         self.req = requests.Session()
-        self.limit = limit # 单词最多返回多少搜索结果
 
     def search(self, keyword):
-        api = '{0}index.php?m=vod-search'.format(BASE_URI)
+        api = '{0}index.php?m=vod-search'.format(self.BASE_URI)
         try:
             data = self.req.post(api, data={'wd': keyword}).text
             links = re.findall('\?m=vod-detail-id-\d+.html', data)
@@ -27,71 +49,89 @@ class ZuidaZYAPI(object):
             print('erro occured', e)
             return []
 
-    def collect(self, item):
-        api = '{0}{1}'.format(BASE_URI, item)
-        html = etree.HTML(self.req.get(api).text)
-
-        movie_base_info = {
-            'id': 'zuidazy_{}'.format(re.sub('\D', '', item)),
-            'source': 'http://www.zuidazy.net/',
+    def _movie_meta_info(self, item, html):
+        movie = {
+            'id': re.sub('\D', '', item)[0],
+            'source': '{0}{1}'.format(self.BASE_URI, item),
             'poster': None,
-            'cover': html.xpath('//div[@class="vodImg"]/img/@src')[0],
-
+            'url': None
         }
-
-        movie_attr_xpath_map = {
-            'cover': '//div[@class="vodImg"]/img/@src',  # 封面
-            'name': '//div[@class="vodInfo"]/div/h2/text()',  # 电影名
-            'note': '//div[@class="vodInfo"]/div/span/text()',  # 备注(BD高清等)
-            'score': '//div[@class="vodInfo"]/div/label/text()',  # 分数
-            'synopsis': '(//div[@class="vodplayinfo"])[2]/text()'  # 剧情简介
-        }
-
-        movie_meta_info = {
-            key: html.xpath(movie_attr_xpath_map[key])[0]
-            for key in movie_attr_xpath_map
-        }
-
-        # 别名/导演/演员等信息在这个ul里面,所以顺序很重要
-        meta_info = html.xpath('//div[@class="vodinfobox"]/ul/li/span')
-        movie_additional_info = {
-            key: meta_info[index].text for (index, key) in enumerate(['name_alias',
-                                                               'directors',
-                                                               'actors',
-                                                               'categories',
-                                                               'region',
-                                                               'language',
-                                                               'year'])}
-        movie = dict(movie_base_info, **dict(movie_meta_info, **movie_additional_info))
-
-        def mapper(s):
-            k,v = s.split('$')
-            return {'name': k, 'url': v}
-        # 更新播放地址/下载地址
-        movie.update(
-            {
-                'download_link': map(mapper, html.xpath('//div[@class="vodplayinfo"]/div/div[@id="down_1"]/ul/li/text()')),
-                'play_m3u8': map(mapper, html.xpath('//div[@class="vodplayinfo"]/div/div[@id="play_1"]/ul/li/text()')),
-                'play_flash': map(mapper,html.xpath('//div[@class="vodplayinfo"]/div/div[@id="play_2"]/ul/li/text()')),
-            }
-        )
-        # 默认播放地址
-        movie['url']  = movie['play_flash'][-1]['url'] if movie['play_flash'] else None
+        movie.update({key: ''.join(html.xpath(self.xpath_str_selectors[key])) for key in self.xpath_str_selectors})
         return movie
 
-api = Blueprint('api', __name__)
-crawler = ZuidaZYAPI(10)
+    def _movie_extra_info(self, item, html):
+        extra_info = html.xpath(self.xpath_lst_selectors['extra'])
+        # Order is very important
+        extra_info_keys = [
+            'name_alias',
+            'directors',
+            'actors',
+            'categories',
+            'region',
+            'language',
+            'year'
+        ]
+        return {
+            key: ''.join(extra_info[index].xpath('text()')) for (index, key) in enumerate(extra_info_keys)
+        }
+
+    def _movie_media_info(self, item, html):
+        def to_dict(source):
+            key, val = source.split('$')
+            return {'name': key, 'url': val}
+        media_info = {
+            'play_m3u8': map(to_dict, html.xpath(self.xpath_lst_selectors['play_m3u8'])),
+            'play_flash': map(to_dict, html.xpath(self.xpath_lst_selectors['play_flash'])),
+            'download_link': map(to_dict, html.xpath(self.xpath_lst_selectors['download_link']))
+        }
+        # set default
+        media_info['url'] = media_info['play_flash'][-1]['url'] if media_info['play_flash'] else None
+        return media_info
+
+    def collect(self, item):
+        api='{0}{1}'.format(self.BASE_URI, item)
+        html=etree.HTML(self.req.get(api).text)
+
+        movie = self._movie_meta_info(item, html)
+        movie.update(self._movie_extra_info(item, html))
+        movie.update(self._movie_media_info(item, html))
+
+        return movie
+
+
+class ZuidaZYAPI(BaseSpider):
+    BASE_URI = 'http://www.zuidazy.net/'
+
+
+class Vip131ZYAPI(BaseSpider):
+    BASE_URI = 'http://131zy.vip/'
+     # 返回数组的选择器
+    xpath_lst_selectors = {
+        # 别名/导演/演员等信息在这个ul里面,所以顺序很重要
+        'extra': '//div[@class="vodinfobox"]/ul/li/span',
+        # 下载地址
+        'download_link': '//div[@class="vodplayinfo"]/div/div[@id="down_1"]/ul/li/text()',
+        # m3u8播放地址
+        'play_m3u8': '//div[@class="vodplayinfo"]/div/ul[2]/li/text()',
+        # flash播放地址
+        'play_flash': '//div[@class="vodplayinfo"]/div/ul[1]/li/text()',
+    }
+
+api=Blueprint('api', __name__)
+
+crawler=Vip131ZYAPI(15)
 
 @api.route('/api/suggest')
 def suggest():
-    endPoint = 'https://movie.douban.com/j/subject_suggest'
-    query = request.args.get('q')
-    sug = requests.get(endPoint, params={'q': query}).json()
+    endPoint='https://movie.douban.com/j/subject_suggest'
+    query=request.args.get('q')
+    sug=requests.get(endPoint, params={'q': query}).json()
     return jsonify(sug)
 
 @api.route('/api/search')
 def search():
-    keyword = request.args.get('keyword')
-
-    return jsonify(crawler.search(keyword))
-
+    keyword=request.args.get('keyword')
+    movies = crawler.search(keyword)
+    if app.config('EASTER_EGG_ENABLE'):
+        movies.append(app.config('EASTER_EGG_MOVIE'))
+    return jsonify(movies)
