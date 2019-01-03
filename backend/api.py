@@ -7,8 +7,12 @@ from flask import request
 from flask import current_app as app
 from lxml import etree
 import requests
+from functools import partial
+import multiprocessing
 
 
+def worker(obj, method, *args, **kwargs):
+    return getattr(obj, method)(*args, **kwargs)
 
 class BaseSpider(object):
 
@@ -38,13 +42,19 @@ class BaseSpider(object):
     def __init__(self, limit=10):
         self.limit = limit
         self.req = requests.Session()
-
+        
     def search(self, keyword):
         api = '{0}index.php?m=vod-search'.format(self.BASE_URI)
         try:
             data = self.req.post(api, data={'wd': keyword}).text
             links = re.findall('\?m=vod-detail-id-\d+.html', data)
-            return filter(None, [self.collect(re.sub('\D', '', link)) for link in links[:self.limit]])
+            pool = multiprocessing.Pool()
+            collect_worker = partial(worker, self, 'collect')
+            jobs = [pool.map_async(collect_worker, (re.sub('\D', '', link), )) for link in links[:self.limit]]
+            pool.close()
+            pool.join()
+            return [item[0] for item in (job.get() for job in jobs) if item]
+
         except Exception as e:
             print('erro occured', e)
             return []
@@ -127,8 +137,13 @@ class SkyRjMovie(BaseSpider):
     def search(self, keyword):
         api = '{}/api/movies'.format(self.BASE_URI)
         movies = self.req.get(api, params={'searchKey': keyword}).json()
+        pool = multiprocessing.Pool()
+        collect_worker = partial(worker, self, 'collect')
+        jobs = [collect_worker(item['ID']) for item in movies]
+        pool.close()
+        pool.join()
+        return [self._format(item[0]) for item in (job.get() for job in jobs) if item]
 
-        return [self.collect(item['ID']) for item in movies]
 
     def collect(self, id):
         api = '{}/api/movie'.format(self.BASE_URI)
@@ -209,4 +224,4 @@ def feedback_search(keyword):
     return api.search(keyword)
 
 if __name__ == "__main__":
-    print(feedback_search('越狱'))
+    print(feedback_search('周星驰'))

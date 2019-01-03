@@ -18,9 +18,9 @@
         </div>
 
         <v-card-title primary-title>
-          <div>
+          <div style="width: 100%;">
             <div class="headline">{{movie.name}}</div>
-            <span class="grey--text small" :style="{textAlign: 'right'}">{{movie.synopsis}}</span>
+            <span class="grey--text small">{{movie.synopsis}}</span>
           </div>
         </v-card-title>
         <v-divider></v-divider>
@@ -78,7 +78,7 @@
           </v-dialog>
           <v-spacer></v-spacer>
           <v-btn icon @click="show = !show">
-            <v-icon>{{ show ? 'keyboard_arrow_down' : 'keyboard_arrow_up' }}</v-icon>
+            <v-icon>{{ show ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}</v-icon>
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -104,6 +104,8 @@ export default {
       loading: true,
       url: null,
       movie: {},
+      playlist: [],
+      playerType: 'm3u8',
       show: false,
       dialog: false,
       selected: "",
@@ -130,22 +132,18 @@ export default {
       }
     };
   },
-  computed: {
-    player() {
-      return this.$refs.videoPlayer.player;
-    },
-    playlist() {
-      return this.movie.play_m3u8 || this.movie.play_flash || [];
-    },
-    playerType() {
-      return this.movie.play_m3u8 ? "m3u8" : "flash";
-    }
-  },
   beforeMount() {
     detail(this.$route.query.source, this.$route.query.id)
       .then(movie => {
         this.movie = movie;
-        this.url = this.playlist[this.playlist.length - 1].url;
+
+        this.playerType = movie.play_m3u8.length ? 'm3u8' : 'flash';
+        this.playlist = this.playerType === 'm3u8' ? movie.play_m3u8 : movie.play_flash;
+
+        console.log(this.playlist, this.playerType)
+        if (this.playlist.length) {
+          this.url = this.playlist[this.playlist.length - 1].url;
+        }
       })
       .finally(() => (this.loading = false));
   },
@@ -158,4 +156,11 @@ export default {
 </script>
 
 <style lang="scss">
+
+.h_iframe iframe{
+  width: 100%;
+  height: 56.25vw;
+  max-height: 282px;
+}
+
 </style>
