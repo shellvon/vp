@@ -151,6 +151,11 @@ export default {
     url() {
       this.playerOptions.sources = [{ src: this.url }];
     }
+  },
+  methods: {
+    download() {
+      alert('Sorry, 暂未实现.')
+    }
   }
 };
 </script>

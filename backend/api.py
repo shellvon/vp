@@ -8,7 +8,8 @@ from flask import current_app as app
 from lxml import etree
 import requests
 from functools import partial
-import multiprocessing
+from multiprocessing import Pool
+from multiprocessing.dummy import Pool as ThreadPool
 
 
 def worker(obj, method, *args, **kwargs):
@@ -42,13 +43,13 @@ class BaseSpider(object):
     def __init__(self, limit=10):
         self.limit = limit
         self.req = requests.Session()
-        
+
     def search(self, keyword):
         api = '{0}index.php?m=vod-search'.format(self.BASE_URI)
         try:
             data = self.req.post(api, data={'wd': keyword}).text
             links = re.findall('\?m=vod-detail-id-\d+.html', data)
-            pool = multiprocessing.Pool()
+            pool = Pool()
             collect_worker = partial(worker, self, 'collect')
             jobs = [pool.map_async(collect_worker, (re.sub('\D', '', link), )) for link in links[:self.limit]]
             pool.close()
@@ -137,13 +138,12 @@ class SkyRjMovie(BaseSpider):
     def search(self, keyword):
         api = '{}/api/movies'.format(self.BASE_URI)
         movies = self.req.get(api, params={'searchKey': keyword}).json()
-        pool = multiprocessing.Pool()
+        pool = Pool()
         collect_worker = partial(worker, self, 'collect')
-        jobs = [collect_worker(item['ID']) for item in movies]
+        jobs = [pool.map_async(collect_worker, (item['ID'], )) for item in movies]
         pool.close()
         pool.join()
-        return [self._format(item[0]) for item in (job.get() for job in jobs) if item]
-
+        return [item[0] for item in (job.get() for job in jobs) if item]
 
     def collect(self, id):
         api = '{}/api/movie'.format(self.BASE_URI)
@@ -198,11 +198,7 @@ def suggest():
 @api.route('/api/search')
 def search():
     keyword=request.args.get('keyword')
-    feedback = request.args.get('feedback', True, bool)
-    crawler=Vip131ZYAPI(PAGE_ITEM_COUNT)
-    movies = crawler.search(keyword)
-    if not movies and feedback:
-        movies = feedback_search(keyword)
+    movies = multi_search(keyword)
     if app.config['EASTER_EGG_ENABLE'] and keyword in app.config['EASTER_EGG_KEYWORDS']:
         movies.insert(0, app.config['EASTER_EGG_MOVIE'])
     return jsonify(movies)
@@ -218,10 +214,30 @@ def detail(source, mid):
         pass
     return jsonify(movie)
 
-def feedback_search(keyword):
-    '''此接口由于搜索的比较慢，好处是数据比较多,所以是做为备用的方式提供.'''
-    api = SkyRjMovie(PAGE_ITEM_COUNT)
-    return api.search(keyword)
+
+def multi_search(keyword):
+    search_worker1 = partial(worker, Vip131ZYAPI(PAGE_ITEM_COUNT), 'search')
+    search_worker2 = partial(worker, SkyRjMovie(PAGE_ITEM_COUNT), 'search')
+
+    thread_pool = ThreadPool()
+    job1 = thread_pool.map_async(search_worker1, (keyword,))
+    job2 = thread_pool.map_async(search_worker2, (keyword,))
+
+    result1 = job1.get()
+    result2 = job2.get()
+    thread_pool.close()
+    thread_pool.join()
+
+    movies = result1[0] if result1 else []
+    movies.extend(result2[0] if result2 else [])
+
+    return movies
+
 
 if __name__ == "__main__":
-    print(feedback_search('周星驰'))
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG,
+                        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                        datefmt='%H:%M:%S')
+    print(multi_search('越狱'))

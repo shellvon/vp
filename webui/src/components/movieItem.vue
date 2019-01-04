@@ -8,7 +8,9 @@
                        <div>导演:{{movie.directors}}</div>
                        <div>主演:{{movie.actors}}</div>
                        <div>上映:{{movie.year}}</div>
-                      <v-chip class="ma-left-0" small label color="pink" text-color="white">{{movie.note}}</v-chip>
+                       <div>来源:{{movie.source}}</div>
+                      <v-chip class="ml-0" small label color="pink" text-color="white" v-if="movie.note">{{movie.note}}</v-chip>
+                      <v-chip class="ml-0" small label color="indigo" text-color="white" v-if="movie.download_link.length">可下载</v-chip>
                    </div>
                </v-card-title>
            </v-flex>
