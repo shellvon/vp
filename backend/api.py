@@ -15,6 +15,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 def worker(obj, method, *args, **kwargs):
     return getattr(obj, method)(*args, **kwargs)
 
+
 class BaseSpider(object):
 
     BASE_URI = 'http://www.zuidazy.net/'
@@ -51,10 +52,11 @@ class BaseSpider(object):
             links = re.findall('\?m=vod-detail-id-\d+.html', data)
             pool = Pool()
             collect_worker = partial(worker, self, 'collect')
-            jobs = [pool.map_async(collect_worker, (re.sub('\D', '', link), )) for link in links[:self.limit]]
+            jobs = [pool.map_async(collect_worker, (re.sub(
+                '\D', '', link), )) for link in links[:self.limit]]
             pool.close()
             pool.join()
-            return [item[0] for item in (job.get() for job in jobs) if item]
+            return [item[0] for item in (job.get() for job in jobs) if item and item[0]]
 
         except Exception as e:
             print('erro occured', e)
@@ -67,7 +69,8 @@ class BaseSpider(object):
             'poster': None,
             'url': None
         }
-        movie.update({key: ''.join(html.xpath(self.xpath_str_selectors[key])) for key in self.xpath_str_selectors})
+        movie.update({key: ''.join(html.xpath(
+            self.xpath_str_selectors[key])) for key in self.xpath_str_selectors})
         return movie
 
     def _movie_extra_info(self, id, html):
@@ -100,8 +103,8 @@ class BaseSpider(object):
         return media_info
 
     def collect(self, id):
-        api='{0}?m=vod-detail-id-{1}.html'.format(self.BASE_URI, id)
-        html=etree.HTML(self.req.get(api).text)
+        api = '{0}?m=vod-detail-id-{1}.html'.format(self.BASE_URI, id)
+        html = etree.HTML(self.req.get(api).text)
 
         movie = self._movie_meta_info(id, html)
         movie.update(self._movie_extra_info(id, html))
@@ -116,7 +119,7 @@ class ZuidaZYAPI(BaseSpider):
 
 class Vip131ZYAPI(BaseSpider):
     BASE_URI = 'http://131zy.vip/'
-     # 返回数组的选择器
+    # 返回数组的选择器
     xpath_lst_selectors = {
         # 别名/导演/演员等信息在这个ul里面,所以顺序很重要
         'extra': '//div[@class="vodinfobox"]/ul/li/span',
@@ -137,18 +140,25 @@ class SkyRjMovie(BaseSpider):
 
     def search(self, keyword):
         api = '{}/api/movies'.format(self.BASE_URI)
-        movies = self.req.get(api, params={'searchKey': keyword}).json()
+        try:
+            movies = self.req.get(api, params={'searchKey': keyword}).json()
+        except Exception as e:
+            print('Skymovie search error', e)
+            return []
         pool = Pool()
         collect_worker = partial(worker, self, 'collect')
-        jobs = [pool.map_async(collect_worker, (item['ID'], )) for item in movies]
+        jobs = [pool.map_async(collect_worker, (item['ID'], ))
+                for item in movies]
         pool.close()
         pool.join()
-        return [item[0] for item in (job.get() for job in jobs) if item]
+        return [item[0] for item in (job.get() for job in jobs) if item and item[0]]
 
     def collect(self, id):
         api = '{}/api/movie'.format(self.BASE_URI)
-        resp = self.req.get(api, params={'id': id}).json()
-
+        try:
+            resp = self.req.get(api, params={'id': id}).json()
+        except Exception as e:
+            return None
         return self._format(resp)
 
     def _format(self, item):
@@ -184,24 +194,27 @@ class SkyRjMovie(BaseSpider):
         }
 
 
-api=Blueprint('api', __name__)
+api = Blueprint('api', __name__)
 
 PAGE_ITEM_COUNT = 15
 
+
 @api.route('/api/suggest')
 def suggest():
-    endPoint='https://movie.douban.com/j/subject_suggest'
-    query=request.args.get('q')
-    sug=requests.get(endPoint, params={'q': query}).json()
+    endPoint = 'https://movie.douban.com/j/subject_suggest'
+    query = request.args.get('q')
+    sug = requests.get(endPoint, params={'q': query}).json()
     return jsonify(sug)
+
 
 @api.route('/api/search')
 def search():
-    keyword=request.args.get('keyword')
+    keyword = request.args.get('keyword')
     movies = multi_search(keyword)
     if app.config['EASTER_EGG_ENABLE'] and keyword in app.config['EASTER_EGG_KEYWORDS']:
         movies.insert(0, app.config['EASTER_EGG_MOVIE'])
     return jsonify(movies)
+
 
 @api.route('/api/movie/<source>/<mid>')
 def detail(source, mid):
@@ -216,21 +229,21 @@ def detail(source, mid):
 
 
 def multi_search(keyword):
-    search_worker1 = partial(worker, Vip131ZYAPI(PAGE_ITEM_COUNT), 'search')
-    search_worker2 = partial(worker, SkyRjMovie(PAGE_ITEM_COUNT), 'search')
-
+    spider_tables = [
+        Vip131ZYAPI,
+        SkyRjMovie,
+        ZuidaZYAPI,
+    ]
     thread_pool = ThreadPool()
-    job1 = thread_pool.map_async(search_worker1, (keyword,))
-    job2 = thread_pool.map_async(search_worker2, (keyword,))
-
-    result1 = job1.get()
-    result2 = job2.get()
+    jobs = [thread_pool.map_async(partial(worker, cls(
+        PAGE_ITEM_COUNT), 'search'), (keyword, )) for cls in spider_tables]
+    results = [job.get() for job in jobs]
     thread_pool.close()
     thread_pool.join()
 
-    movies = result1[0] if result1 else []
-    movies.extend(result2[0] if result2 else [])
-
+    movies = []
+    for ret in results:
+        movies.extend(ret[0] if ret else [])
     return movies
 
 
