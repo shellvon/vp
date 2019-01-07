@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 
 import re
+import time
 from flask import Blueprint
 from flask import jsonify
 from flask import request
@@ -86,7 +87,7 @@ class BaseSpider(object):
             'year'
         ]
         return {
-            key: ''.join(extra_info[index].xpath('text()')) for (index, key) in enumerate(extra_info_keys)
+            key: ''.join(extra_info[index].xpath('text()')).strip() for (index, key) in enumerate(extra_info_keys)
         }
 
     def _movie_media_info(self, id, html):
@@ -147,7 +148,8 @@ class SkyRjMovie(BaseSpider):
             return []
         pool = Pool()
         collect_worker = partial(worker, self, 'collect')
-        jobs = [pool.map_async(collect_worker, (item['ID'], ))
+
+        jobs = [pool.map_async(delay(collect_worker, 0.1), (item['ID'], ))
                 for item in movies]
         pool.close()
         pool.join()
@@ -198,6 +200,10 @@ api = Blueprint('api', __name__)
 
 PAGE_ITEM_COUNT = 15
 
+def delay(worker, period):
+    '''搜索的商户频率太快会Connection Refused,所以需要延迟那么一会儿'''
+    time.sleep(period)
+    return worker
 
 @api.route('/api/suggest')
 def suggest():
