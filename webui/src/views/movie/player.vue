@@ -3,11 +3,9 @@
     <v-flex xs12>
       <v-card>
         <v-progress-linear :indeterminate="true" v-if="loading" color="info"></v-progress-linear>
-
         <v-card-actions>
           <v-select :items="playlist" v-model="url" item-text="name" item-value="url" label="播放地址"></v-select>
           <v-spacer></v-spacer>
-          <span class="grey--text small">微信搜索: 淘逗逗</span>
         </v-card-actions>
 
         <div class="player-container" v-if="playerType === 'm3u8'">
@@ -16,10 +14,17 @@
         <div class="h_iframe" v-if="playerType === 'flash'">
           <iframe :src="url" frameborder="0" allowfullscreen></iframe>
         </div>
+        <v-alert
+          type="warning"
+          :value="showWarning"
+        >为了您的家庭幸福、财产安全、人生顺利，建议您不要去相信电影屏幕上的任何广告，单纯的享受观影带来的乐趣即可!</v-alert>
 
         <v-card-title primary-title>
           <div style="width: 100%;">
-            <div class="headline">{{movie.name}}</div>
+            <div class="headline">
+              <span>{{movie.name}}</span>
+              <v-icon color="orange" @click="showWarning = !showWarning">warning</v-icon>
+            </div>
             <span class="grey--text small">{{movie.synopsis}}</span>
           </div>
         </v-card-title>
@@ -105,10 +110,11 @@ export default {
       url: null,
       movie: {},
       playlist: [],
-      playerType: 'm3u8',
+      playerType: "m3u8",
       show: false,
       dialog: false,
       selected: "",
+      showWarning: false,
       meta: {
         directors: "导演",
         actors: "主演",
@@ -133,14 +139,22 @@ export default {
     };
   },
   beforeMount() {
+    if (this.$route.query.url) {
+      this.url = this.$route.query.url;
+      let name = this.$route.query.name || this.url;
+      this.playerType = this.url.indexOf(".m3u8") >= 0 ? "m3u8" : "flash";
+      this.playlist = [{ name, url: this.url }];
+      this.loading = false;
+      return;
+    }
     detail(this.$route.query.source, this.$route.query.id)
       .then(movie => {
         this.movie = movie;
 
-        this.playerType = movie.play_m3u8.length ? 'm3u8' : 'flash';
-        this.playlist = this.playerType === 'm3u8' ? movie.play_m3u8 : movie.play_flash;
+        this.playerType = movie.play_m3u8.length ? "m3u8" : "flash";
+        this.playlist =
+          this.playerType === "m3u8" ? movie.play_m3u8 : movie.play_flash;
 
-        console.log(this.playlist, this.playerType)
         if (this.playlist.length) {
           this.url = this.playlist[this.playlist.length - 1].url;
         }
@@ -154,18 +168,21 @@ export default {
   },
   methods: {
     download() {
-      alert('Sorry, 暂未实现.')
+      alert("Sorry, 暂未实现.");
     }
   }
 };
 </script>
 
 <style lang="scss">
-
-.h_iframe iframe{
+.h_iframe iframe {
   width: 100%;
   height: 56.25vw;
   max-height: 282px;
 }
-
+.headline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 </style>

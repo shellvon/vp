@@ -18,7 +18,8 @@ import {
     VRating,
     VSnackbar,
     VDialog,
-
+    VSwitch,
+    VAlert,
 } from 'vuetify'
 
 import {
@@ -58,6 +59,8 @@ Vue.use(Vuetify, {
         VDialog,
         VRadioGroup,
         VRadio,
+        VSwitch,
+        VAlert,
     },
     theme: {
         primary: '#4DBA87'

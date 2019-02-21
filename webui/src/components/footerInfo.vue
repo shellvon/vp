@@ -1,7 +1,7 @@
 <template>
     <footer class="caption">
-        <p>更多惊喜,欢迎关注微信公众号<strong>淘逗逗</strong></p>
-        <p>Created by <a href="https://von.sh">shellvon</a></p>
+        <p>更多惊喜,欢迎关注微信公众号<strong @click="$emit('click')" class="wechat-name">淘逗逗</strong></p>
+        <p>Created by <a href="https://von.sh">shellvon</a> | <a href="/feedback">使用反馈</a></p>
     </footer>
 </template>
 
@@ -25,5 +25,8 @@ footer > p {
 footer > p > a {
     color: #007acc;
     text-decoration: none
+}
+.wechat-name {
+    color: #007acc;
 }
 </style>

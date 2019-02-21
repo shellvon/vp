@@ -34,7 +34,7 @@
           </template>
           <template v-else>
             <v-list-tile-avatar v-if="data.item.img">
-              <img :src="data.item.img">
+              <img :src="`/dbimg?url=${data.item.img}`">
             </v-list-tile-avatar>
             <v-list-tile-content>
               <v-list-tile-title v-html="data.item.title"></v-list-tile-title>
@@ -43,6 +43,12 @@
           </template>
         </template>
       </v-autocomplete>
+      <div class="qrcode" v-show="showQrCode">
+        <p class="qr-title">可扫描屏幕下方二维码关注</p>
+        <img src="../../assets/tdd-qr.png">
+        <span class="tip">淘逗逗-视频盒子</span>
+      </div>
+
       <v-card>
         <v-list xs12 class="pa-0">
           <template v-for="movie in movies">
@@ -60,7 +66,7 @@
     >没有搜到相关的视频,换个关键词试试吧....
       <v-btn dark flat @click="snackbar = false">关闭</v-btn>
     </v-snackbar>
-    <footer-info></footer-info>
+    <footer-info v-on:click="showQrCode = !showQrCode"></footer-info>
   </v-layout>
 </template>
 
@@ -80,6 +86,7 @@ export default {
     return {
       snackbar: false,
       loading: false,
+      showQrCode: false,
       suggestList: [],
       searchValue: "",
       selected: [],
@@ -91,15 +98,17 @@ export default {
       if (!this.selected) {
         return;
       }
+      this.showQrCode = false;
       this.loading = true;
       this.movies = [];
-      search(this.selected.title).then(resp => {
-        this.movies = resp;
-       
-      }).finally(() => {
+      search(this.selected.title)
+        .then(resp => {
+          this.movies = resp;
+        })
+        .finally(() => {
           this.snackbar = this.movies.length === 0;
-          this.loading = false
-      });
+          this.loading = false;
+        });
     },
     onSuggest: throttle(function(val) {
       if (this.loading) {
@@ -144,8 +153,32 @@ export default {
 };
 </script>
 
-<style >
+<style lang="scss">
 h1 {
   opacity: 0.3;
+}
+.v-input__slot {
+  border: 1px solid #eee;
+}
+.qrcode {
+  background: #fff;
+  border-radius: 2px;
+  position: relative;
+  .qr-title {
+    font-size: 18px;
+    // font-weight: 200;
+    color: #fff;
+    line-height: 50px;
+    text-align: left;
+    padding: 0 1em;
+    box-sizing: border-box;
+    background: rgb(33, 147, 204);
+  }
+  .tip {
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    color: #999;
+  }
 }
 </style>

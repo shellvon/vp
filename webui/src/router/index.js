@@ -23,6 +23,13 @@ const router = new Router({
             component(resolve) {
                 require(['@/views/movie/player.vue'], resolve)
             }
+        },
+        {
+            path: '/feedback',
+            name: 'feedback',
+            component(resolve) {
+                require(['@/views/feedback/index.vue'], resolve)
+            }
         }
     ]
 })

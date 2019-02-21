@@ -7,6 +7,7 @@
       </v-container>
       </transition>
     </v-content>
+    <span id="cnzz_stat_icon_1276245163"></span>
   </v-app>
 </template>
 
