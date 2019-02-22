@@ -21,7 +21,7 @@
 
         <v-card-title primary-title>
           <div style="width: 100%;">
-            <div class="headline">
+            <div class="headline movie-name">
               <span>{{movie.name}}</span>
               <v-icon color="orange" @click="showWarning = !showWarning">warning</v-icon>
             </div>
@@ -180,7 +180,7 @@ export default {
   height: 56.25vw;
   max-height: 282px;
 }
-.headline {
+.movie-name {
   display: flex;
   justify-content: center;
   align-items: center;

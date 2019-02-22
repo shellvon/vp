@@ -68,7 +68,10 @@ class BaseSpider(object):
             'id': id,
             'source': self.__class__.__name__,
             'poster': None,
-            'url': None
+            'url': None,
+            'play_m3u8': [],
+            'play_flash': [],
+            'download_link': [],
         }
         movie.update({key: ''.join(html.xpath(
             self.xpath_str_selectors[key])) for key in self.xpath_str_selectors})
@@ -106,13 +109,14 @@ class BaseSpider(object):
         media_info['url'] = media_info['play_flash'][-1]['url'] if media_info['play_flash'] else None
         return media_info
 
-    def collect(self, id):
+    def collect(self, id, with_urls = False):
         api = '{0}?m=vod-detail-id-{1}.html'.format(self.BASE_URI, id)
         html = etree.HTML(self.req.get(api).text)
 
         movie = self._movie_meta_info(id, html)
         movie.update(self._movie_extra_info(id, html))
-        movie.update(self._movie_media_info(id, html))
+        if with_urls:
+            movie.update(self._movie_media_info(id, html))
 
         return movie
 
@@ -158,7 +162,7 @@ class SkyRjMovie(BaseSpider):
         pool.join()
         return [item[0] for item in (job.get() for job in jobs) if item and item[0]]
 
-    def collect(self, id):
+    def collect(self, id, with_urls=False):
         api = '{}/api/movie'.format(self.BASE_URI)
         try:
             resp = self.req.get(api, params={'id': id}).json()
@@ -237,14 +241,15 @@ class Aiwan94(BaseSpider):
             print('erro occured', e)
             return []
 
-    def collect(self, id):
+    def collect(self, id, with_urls=False):
         api = '{0}show/{1}.html'.format(self.BASE_URI, id)
         resp = self.req.get(api)
         resp.encoding='utf-8'
         html = etree.HTML(resp.text)
         movie = self._movie_meta_info(id, html)
         movie.update(self._movie_extra_info(id, html))
-        movie.update(self._movie_media_info(id, html))
+        if with_urls:
+            movie.update(self._movie_media_info(id, html))
         return movie
 
     def _movie_extra_info(self, id, html):
@@ -301,6 +306,7 @@ class NiuZy(BaseSpider):
         'play_flash': '//div[@class="vodplayinfo"]/div/ul[2]/li/text()',
     }
 
+    BaseSpider.xpath_str_selectors['synopsis'] = '//div[@class="vodplayinfo"]/text()'
     def search(self, keyword):
         params = {
             'wd': keyword,
@@ -315,12 +321,13 @@ class NiuZy(BaseSpider):
         pool.join()
         return [item[0] for item in (job.get() for job in jobs) if item and item[0]]
 
-    def collect(self, id):
+    def collect(self, id, with_urls=False):
         api = '{0}/voddetail/{1}'.format(self.BASE_URI, id)
         html = etree.HTML(self.req.get(api).text)
         movie = self._movie_meta_info(id, html)
         movie.update(self._movie_extra_info(id, html))
-        movie.update(self._movie_media_info(id, html))
+        if with_urls:
+            movie.update(self._movie_media_info(id, html))
 
         return movie
 
@@ -350,24 +357,14 @@ class JingpinZy(BaseSpider):
     }
 
 
-    def collect(self, id):
+    def collect(self, id, with_urls=False):
         data = self.req.get(self.BASE_URI, params = {'m': 'vod-detail-id-{0}.html'.format(id)}).text
         html = etree.HTML(data)
         movie = self._movie_meta_info(id, html)
         movie.update(self._movie_extra_info(id, html))
-        movie.update(self._movie_media_info(id, html))
+        if with_urls:
+            movie.update(self._movie_media_info(id, html))
 
-        return movie
-
-    def _movie_meta_info(self, id, html):
-        movie = {
-            'id': id,
-            'source': self.__class__.__name__,
-            'poster': None,
-            'url': None
-        }
-        movie.update({key: ''.join(html.xpath(
-            self.xpath_str_selectors[key])) for key in self.xpath_str_selectors})
         return movie
 
     def _movie_extra_info(self, id, html):
@@ -440,13 +437,45 @@ def search():
     return jsonify(movies)
 
 
+class LiveStream(object):
+    def __init__(self, limit):
+        pass
+    def collect(self, id, with_urls=False):
+        return {
+            'name': '在线电视直播测试',
+            'actors': 'By 视频盒子',
+            'categories': 'By 视频盒子',
+            'cover': None,
+            'directors': '无导演',
+            'download_link': [],
+            'id': id,
+            'language': None,
+            'name_alias': None,
+            'note': '直播',
+            'play_flash': [],
+            'play_m3u8': [
+                {
+                    'name': '湖南卫视HD',
+                    'url': 'http://ivi.bupt.edu.cn/a/hunanhd.m3u8',
+                    #'url': 'http://223.87.13.35:8114/LIVES/Fsv_otype=1&FvSeid=&Fsv_filetype=1&Fsv_chan_hls_se_idx=58&Provider_id=&Pcontent_id=index.m3u8'
+                },
+            ],
+            'poster': None,
+            'region': None,
+            'score': 0,
+            'source': self.__class__.__name__,
+            'synopsis': '网络电视直播测试',
+            'url':  None,
+            'year': '2019',
+        }
+
 @api.route('/api/movie/<source>/<mid>')
 def detail(source, mid):
     movie = {}
     try:
         klass = globals()[source]
         api = klass(PAGE_ITEM_COUNT)
-        movie = api.collect(mid)
+        movie = api.collect(mid, with_urls=True)
     except:
         pass
     return jsonify(movie)
@@ -478,6 +507,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG,
                         format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
                         datefmt='%H:%M:%S')
-    spider = JingpinZy(10)
-
-    print spider.collect('20173')
+    r = multi_search('海贼王')
+    print r

@@ -3,7 +3,9 @@
     <v-content>
       <transition :name="transitionName" @afterLeave="clearTransition">
       <v-container id="container">
-        <router-view></router-view>
+        <keep-alive include="Home">
+          <router-view></router-view>
+        </keep-alive>
       </v-container>
       </transition>
     </v-content>

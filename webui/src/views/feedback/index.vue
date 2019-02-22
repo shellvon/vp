@@ -56,10 +56,14 @@ export default {
       document.title = '视频盒子-意见反馈'
     },
     feedback () {
-    
-        request(this.form).then(() => {
+        request({
+            url: '/',
+            method: 'GET',
+            params: this.form,
+        }).then(() => {
             this.snackbar = true;
-        }).catch(() => {
+        }).catch((e) => {
+            console.log(e)
             this.snackbar = true;
         })
    
