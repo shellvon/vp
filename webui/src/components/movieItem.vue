@@ -62,7 +62,9 @@ export default {
     },
     methods: {
         watchMovie(){
-            this.$router.push({name: 'player', query: {source: this.movie.source, id: this.movie.id}})
+            this.$uweb.trackEvent('movie', 'view', this.movie.name)
+            this.$uweb.trackPageview(`/player?source=${this.movie.source}&${this.movie.id}&title=${this.movie.name}`, '/home')
+            this.$router.push({name: 'player', query: {source: this.movie.source, id: this.movie.id, title: this.movie.name}})
         }
     }
 }

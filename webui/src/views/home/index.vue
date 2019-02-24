@@ -101,6 +101,7 @@ export default {
       this.showQrCode = false;
       this.loading = true;
       this.movies = [];
+      this.$uweb.trackEvent('movie', 'search', this.selected.title)
       search(this.selected.title)
         .then(resp => {
           this.movies = resp;

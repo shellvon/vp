@@ -38,8 +38,7 @@
           </v-list>
         </v-slide-y-transition>
         <v-card-actions>
-          <v-btn :to="{name: 'home'}" color="success">返回搜索</v-btn>
-
+          <v-btn :to="{name: 'home'}" color="success" v-track-pageview="`/home,${window.location.href}`">返回搜索</v-btn>
           <v-dialog
             v-model="dialog"
             width="500"
@@ -145,6 +144,10 @@ export default {
       this.playerType = this.url.indexOf(".m3u8") >= 0 ? "m3u8" : "flash";
       this.playlist = [{ name, url: this.url }];
       this.loading = false;
+      return;
+    }
+    if (!this.$route.query.source || !this.$route.query.id) {
+      this.$router.push({name: 'home'})
       return;
     }
     detail(this.$route.query.source, this.$route.query.id)
