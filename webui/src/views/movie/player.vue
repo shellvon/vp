@@ -38,7 +38,7 @@
           </v-list>
         </v-slide-y-transition>
         <v-card-actions>
-          <v-btn :to="{name: 'home'}" color="success" v-track-pageview="`/home,${window.location.href}`">返回搜索</v-btn>
+          <v-btn :to="{name: 'home'}" color="success" v-track-pageview="`/home,${$route.fullPath}`">返回搜索</v-btn>
           <v-dialog
             v-model="dialog"
             width="500"
