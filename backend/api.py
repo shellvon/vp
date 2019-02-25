@@ -441,6 +441,19 @@ class LiveStream(object):
     def __init__(self, limit):
         pass
     def collect(self, id, with_urls=False):
+        links = []
+        try:
+            html = etree.HTML(requests.get('http://ivi.bupt.edu.cn/').content)
+            for el in html.xpath('//div[@class="row"]/div[contains(concat(" ", normalize-space(@class), " "), " 2u ")]'):
+                name = ''.join(el.xpath('p/text()'))
+                urls = el.xpath('a[contains(@href, ".m3u8")]/@href')
+                if urls:
+                    links.append({
+                        'name': name,
+                        'url': 'http://ivi.bupt.edu.cn{0}'.format(urls[0])
+                    })
+        except:
+            links = []
         return {
             'name': '在线电视直播测试',
             'actors': 'By 视频盒子',
@@ -453,18 +466,12 @@ class LiveStream(object):
             'name_alias': None,
             'note': '直播',
             'play_flash': [],
-            'play_m3u8': [
-                {
-                    'name': '湖南卫视HD',
-                    'url': 'http://ivi.bupt.edu.cn/a/hunanhd.m3u8',
-                    #'url': 'http://223.87.13.35:8114/LIVES/Fsv_otype=1&FvSeid=&Fsv_filetype=1&Fsv_chan_hls_se_idx=58&Provider_id=&Pcontent_id=index.m3u8'
-                },
-            ],
+            'play_m3u8': links,
             'poster': None,
             'region': None,
             'score': 0,
             'source': self.__class__.__name__,
-            'synopsis': '网络电视直播测试',
+            'synopsis': '网络电视直播测试,观看人数较多时可能比较卡顿,可切换卫视试试' if links else '暂无片源可用',
             'url':  None,
             'year': '2019',
         }
