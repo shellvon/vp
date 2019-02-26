@@ -1,6 +1,15 @@
 <template>
   <v-layout row>
     <v-flex xs12>
+      <v-snackbar
+      v-model="snackbar"
+      :color="'cyan darken-2'"
+      :timeout="1500"
+      :top="true"
+    >已为您自动切换剧集
+      <v-btn dark flat @click="snackbar = false">关闭</v-btn>
+    </v-snackbar>
+
       <v-card>
         <v-progress-linear :indeterminate="true" v-if="loading" color="info"></v-progress-linear>
         <v-card-actions>
@@ -9,7 +18,7 @@
         </v-card-actions>
 
         <div class="player-container" v-if="playerType === 'm3u8'">
-          <video-player ref="videoPlayer" class="vjs-custom-skin" :options="playerOptions"></video-player>
+          <video-player ref="videoPlayer" class="vjs-custom-skin" :options="playerOptions" @ended="onPlayerEnded($event)"></video-player>
         </div>
         <div class="h_iframe" v-if="playerType === 'flash'">
           <iframe :src="url" frameborder="0" allowfullscreen></iframe>
@@ -112,7 +121,10 @@ export default {
       playerType: "m3u8",
       show: false,
       dialog: false,
+      snackbar: false,
       selected: "",
+      episode: 1,
+      totalEpisode: 1,
       showWarning: false,
       meta: {
         directors: "导演",
@@ -153,13 +165,13 @@ export default {
     detail(this.$route.query.source, this.$route.query.id)
       .then(movie => {
         this.movie = movie;
-
         this.playerType = movie.play_m3u8.length ? "m3u8" : "flash";
         this.playlist =
           this.playerType === "m3u8" ? movie.play_m3u8 : movie.play_flash;
-
         if (this.playlist.length) {
-          this.url = this.playlist[this.playlist.length - 1].url;
+          this.totalEpisode = this.playlist.length;
+          this.episode = this.totalEpisode
+          this.url = this.playlist[this.episode - 1].url
         }
       })
       .finally(() => (this.loading = false));
@@ -172,6 +184,17 @@ export default {
   methods: {
     download() {
       alert("Sorry, 暂未实现.");
+    },
+    onPlayerEnded(player)
+    {
+      this.snackbar = true;
+      if (this.episode < this.totalEpisode) {
+        this.episode ++;
+      } else {
+        this.episode = 1;
+      }
+      this.url = this.playlist[this.episode - 1].url;
+      this.playerOptions.autoplay = true // 开启自动播放
     }
   }
 };
