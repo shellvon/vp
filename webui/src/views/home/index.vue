@@ -3,7 +3,7 @@
     <v-flex text-xs-center>
       <h1 class="primary--text display-5 font-weight-medium my-5">视频盒子</h1>
     </v-flex>
-    <v-flex tedtx-xs-center xs12>
+    <v-flex text-xs-center xs12>
       <v-autocomplete
         v-model="selected"
         :items="items"
