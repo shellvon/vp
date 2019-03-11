@@ -25,3 +25,9 @@ export function detail(source, movieId){
         url: `/api/movie/${source}/${movieId}`
     })
 }
+
+export function getHotSearch(){
+    return request({
+        url: '/api/movie/hot-search'
+    })
+}

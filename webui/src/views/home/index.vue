@@ -1,8 +1,9 @@
 <template>
   <v-layout row wrap>
-    <v-flex text-xs-center>
+    <div class="logo">
+      <img src="../../assets/logo.svg"/>
       <h1 class="primary--text display-5 font-weight-medium my-5">视频盒子</h1>
-    </v-flex>
+    </div>
     <v-flex text-xs-center xs12>
       <v-autocomplete
         v-model="selected"
@@ -18,7 +19,11 @@
         solo
         flat
         return-object
+       
       >
+
+          <icon slot="prepend-inner" class="v-icon material-icons theme--light">search</icon>
+
         <template slot="no-data">
           <v-list-tile>
             <v-list-tile-title>
@@ -43,6 +48,12 @@
           </template>
         </template>
       </v-autocomplete>
+
+      <div class="text-xs-left mb-3" v-show="!searchValue">
+        <v-chip text-color="#666" v-for="hot in hots" :key="hot.name"  color="#eee" class="clickable" @click="hotSearch(hot.name)">
+            {{hot.name}}
+        </v-chip>
+      </div>
       <div class="qrcode" v-show="showQrCode">
         <p class="qr-title">可扫描屏幕下方二维码关注</p>
         <img src="../../assets/tdd-qr.png">
@@ -72,7 +83,7 @@
 
 <script>
 import { throttle } from "@/utils/index";
-import { suggest, search } from "@/api/home";
+import { suggest, search, getHotSearch } from "@/api/home";
 import FooterInfo from "@/components/footerInfo";
 import MovieItem from "@/components/movieItem";
 
@@ -89,11 +100,24 @@ export default {
       showQrCode: false,
       suggestList: [],
       searchValue: "",
-      selected: [],
-      movies: []
+      selected: {},
+      movies: [],
+      hots: [],
     };
   },
+  created() {
+    getHotSearch().then(resp => {
+      this.hots = resp;
+    }).catch(e => {
+      console.log(e)
+    })
+  },
   methods: {
+    hotSearch(name) {
+      this.selected = {title: name}
+      this.searchValue = name
+      this.onSearch()
+    },
     onSearch() {
       if (!this.selected) {
         return;
@@ -155,8 +179,20 @@ export default {
 </script>
 
 <style lang="scss">
+.logo {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  img {
+    margin-right: 10px;
+    width: 48px;
+    opacity: .7;
+  }
+}
 h1 {
-  opacity: 0.3;
+  opacity: 0.6;
 }
 .v-input__slot {
   border: 1px solid #eee;
@@ -181,5 +217,12 @@ h1 {
     bottom: 5px;
     color: #999;
   }
+}
+
+.clickable {
+  padding: 0 5px;
+}
+.clickable > .v-chip__content {
+  cursor: pointer;
 }
 </style>

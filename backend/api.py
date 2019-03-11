@@ -487,6 +487,13 @@ def detail(source, mid):
         pass
     return jsonify(movie)
 
+@api.route('/api/movie/hot-search')
+def hot_search():
+    return jsonify([
+        {
+            'name': '怒晴湘西'
+        }
+    ])
 
 def multi_search(keyword):
     spider_tables = [
