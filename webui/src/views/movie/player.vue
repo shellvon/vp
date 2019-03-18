@@ -179,6 +179,7 @@ export default {
   watch: {
     url() {
       this.playerOptions.sources = [{ src: this.url }];
+      this.episode = this.playlist.findIndex(el => el.url === this.url) + 1
     }
   },
   methods: {
