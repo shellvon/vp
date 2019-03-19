@@ -57,4 +57,24 @@ curl -X GET /api/search?keyword=X战警
 ]
 ```
 
+#### 视频详情
 
+```bash
+curl -X GET /api/movie/:source/:id
+{
+  "id": 123,
+  "language": "Zh",
+  // ...
+}
+```
+
+#### 热门搜索
+language
+
+curl -X GET /api/movie/hot-search
+[
+  {
+    "name": "xxx"
+  },
+  //...
+]
