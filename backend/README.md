@@ -69,8 +69,8 @@ curl -X GET /api/movie/:source/:id
 ```
 
 #### 热门搜索
-language
 
+```bash
 curl -X GET /api/movie/hot-search
 [
   {
@@ -78,3 +78,4 @@ curl -X GET /api/movie/hot-search
   },
   //...
 ]
+```
