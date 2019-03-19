@@ -7,6 +7,7 @@
                        <div class="headline">{{movie.name}}</div>
                        <div>导演:{{movie.directors}}</div>
                        <div>主演:{{movie.actors}}</div>
+                       <div>分类:{{movie.categories}}</div>
                        <div>上映:{{movie.year}}</div>
                        <div>来源:{{movie.source}}</div>
                       <v-chip class="ml-0" small label color="pink" text-color="white" v-if="movie.note">{{movie.note}}</v-chip>

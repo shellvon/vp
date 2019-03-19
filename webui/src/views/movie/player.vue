@@ -129,6 +129,7 @@ export default {
       meta: {
         directors: "导演",
         actors: "主演",
+        categories: '分类',
         note: "备注",
         year: "年份",
         score: "评分"
