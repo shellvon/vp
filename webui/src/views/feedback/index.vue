@@ -8,7 +8,11 @@
     >反馈成功
       <v-btn dark flat @click="snackbar = false">关闭</v-btn>
     </v-snackbar>
-
+     <v-alert
+          type="info"
+          :value=true
+          :style="{'text-align': 'left'}"
+        >如若反馈的问题是本站无法搜索的资源,请填写邮箱地址,一旦有资源我们将会发送至您的邮箱!!</v-alert>
     <img src="./../../assets/bg@2x.png">
     <div class="content">
       <textarea v-model="form.content" cols="30" rows="6" placeholder="请填写10个字以上的意见或建议，我们将为你不断改进"></textarea>
@@ -16,7 +20,7 @@
     <div class="form">
       <section>
         <span>邮箱</span>
-        <input type="text" placeholder="（选填，方便我们答复你）" v-model="form.email">
+        <input type="email" placeholder="（选填，方便我们答复你）" v-model="form.email">
       </section>
       <section>
         <span>微信号</span>
@@ -24,10 +28,10 @@
       </section>
       <section>
         <span>QQ号</span>
-        <input type="text" placeholder="（选填，方便我们答复你）" v-model="form.qq">
+        <input type="number" min="10000" placeholder="（选填，方便我们答复你）" v-model="form.qq">
       </section>
     </div>
-    <button class="submit" @click="feedback" :disabled="!form.content">提交</button>
+    <button class="submit" @click="feedback" :disabled="!form.content || (!form.email && !form.wexin && !form.qq)">提交</button>
   </div>
 </template>
 
