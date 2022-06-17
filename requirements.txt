@@ -1,2 +1,2 @@
-Scrapy==1.5.0
+Scrapy==2.6.1
 scrapy-mongodb==0.12.0
